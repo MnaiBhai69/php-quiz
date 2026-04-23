@@ -1,0 +1,887 @@
+<style>
+  :root {
+    --quiz-bg: linear-gradient(145deg, #eef5ff 0%, #f4f0ff 45%, #effaf4 100%);
+    --quiz-text: var(--color-text-primary, #101828);
+    --quiz-text-muted: var(--color-text-secondary, #475467);
+    --quiz-border: var(--color-border-tertiary, #d0d5dd);
+    --quiz-border-strong: var(--color-border-secondary, #c3c9d4);
+    --quiz-surface: var(--color-background-primary, #ffffff);
+    --quiz-surface-soft: var(--color-background-secondary, #f8fafc);
+    --quiz-surface-hover: var(--color-background-tertiary, #eef2f7);
+    --quiz-radius: var(--border-radius-lg, 16px);
+    --quiz-radius-sm: var(--border-radius-md, 12px);
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: var(--font-sans, "Segoe UI", Tahoma, Geneva, Verdana, sans-serif);
+    color: var(--quiz-text);
+    background: var(--quiz-bg);
+    min-height: 100vh;
+  }
+
+  #quiz-wrap {
+    width: min(980px, 100% - 2rem);
+    margin: 1.5rem auto;
+    padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: calc(var(--quiz-radius) + 4px);
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 18px 45px rgba(22, 32, 52, 0.12);
+  }
+
+  #header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  #progress-bar-wrap {
+    width: 100%;
+    height: 8px;
+    background: #dce2ea;
+    border-radius: 999px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+  }
+
+  #progress-bar {
+    height: 8px;
+    background: linear-gradient(90deg, #1b8d68 0%, #2da972 100%);
+    border-radius: 999px;
+    transition: width 0.3s ease;
+  }
+
+  #category-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: #e9f4ff;
+    color: #124a79;
+    border: 1px solid #b6d7f4;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+
+  #q-num,
+  #score-badge {
+    font-size: 13px;
+    color: var(--quiz-text-muted);
+    font-weight: 600;
+  }
+
+  #question-card {
+    background: var(--quiz-surface);
+    border: 1px solid var(--quiz-border);
+    border-radius: var(--quiz-radius);
+    padding: 1.3rem;
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
+  }
+
+  #question-text {
+    font-size: clamp(16px, 2.3vw, 19px);
+    font-weight: 700;
+    color: var(--quiz-text);
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+
+  .code-block {
+    background: #0f172a;
+    border-radius: var(--quiz-radius-sm);
+    padding: 10px 14px;
+    font-family: var(--font-mono, "Consolas", "Courier New", monospace);
+    font-size: 12px;
+    color: #e2e8f0;
+    margin-bottom: 1rem;
+    border: 1px solid #1e293b;
+    white-space: pre;
+    overflow-x: auto;
+    line-height: 1.5;
+  }
+
+  #options {
+    display: grid;
+    gap: 10px;
+  }
+
+  .opt {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: var(--quiz-surface-soft);
+    border: 1px solid var(--quiz-border-strong);
+    border-radius: var(--quiz-radius-sm);
+    padding: 12px 14px;
+    font-size: 15px;
+    color: var(--quiz-text);
+    cursor: pointer;
+    transition: transform 0.12s ease, background 0.15s, border-color 0.15s, box-shadow 0.2s;
+  }
+
+  .opt:hover:not(:disabled) {
+    background: var(--quiz-surface-hover);
+    border-color: #9fb0c7;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
+  }
+
+  .opt:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  .opt:disabled {
+    cursor: not-allowed;
+  }
+
+  .opt.correct {
+    background: #eaf3de;
+    border-color: #639922;
+    color: #3b6d11;
+  }
+
+  .opt.wrong {
+    background: #fcebeb;
+    border-color: #a32d2d;
+    color: #791f1f;
+  }
+
+  .opt.reveal {
+    background: #e6f1fb;
+    border-color: #378add;
+    color: #185fa5;
+  }
+
+  #feedback {
+    font-size: 13px;
+    padding: 10px 14px;
+    border-radius: var(--quiz-radius-sm);
+    margin-top: 6px;
+    line-height: 1.6;
+    display: none;
+  }
+
+  #feedback.show {
+    display: block;
+  }
+
+  #feedback.ok {
+    background: #eaf3de;
+    color: #3b6d11;
+    border: 1px solid #639922;
+  }
+
+  #feedback.fail {
+    background: #fcebeb;
+    color: #791f1f;
+    border: 1px solid #a32d2d;
+  }
+
+  #next-btn,
+  #restart-btn {
+    margin-top: 1rem;
+    padding: 10px 22px;
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 10px;
+    border: 1px solid var(--quiz-border-strong);
+    background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+    color: var(--quiz-text);
+    cursor: pointer;
+    transition: transform 0.1s ease, box-shadow 0.2s ease, background 0.2s;
+  }
+
+  #next-btn {
+    display: none;
+  }
+
+  #next-btn.show {
+    display: inline-block;
+  }
+
+  #next-btn:hover,
+  #restart-btn:hover {
+    background: linear-gradient(180deg, #ffffff 0%, #e7edf5 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.1);
+  }
+
+  #results {
+    display: none;
+    text-align: center;
+    padding: 2rem 1rem;
+  }
+
+  #results h2 {
+    font-size: clamp(22px, 3.4vw, 30px);
+    font-weight: 800;
+    margin-bottom: 8px;
+    color: var(--quiz-text);
+  }
+
+  #results p {
+    color: var(--quiz-text-muted);
+    font-size: 15px;
+    margin-bottom: 1.5rem;
+  }
+
+  #score-big {
+    font-size: clamp(36px, 7vw, 52px);
+    font-weight: 800;
+    margin: 12px 0;
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 1rem 0;
+  }
+
+  .stat-box {
+    background: var(--quiz-surface-soft);
+    border: 1px solid var(--quiz-border);
+    border-radius: var(--quiz-radius-sm);
+    padding: 12px;
+    font-size: 13px;
+    color: var(--quiz-text-muted);
+  }
+
+  .stat-box strong {
+    display: block;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--quiz-text);
+    margin-bottom: 2px;
+  }
+
+  #filter-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+    align-items: center;
+  }
+
+  .filter-btn {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 13px;
+    border-radius: 999px;
+    border: 1px solid var(--quiz-border-strong);
+    background: var(--quiz-surface-soft);
+    color: var(--quiz-text-muted);
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+  }
+
+  .filter-btn:hover {
+    background: #edf2ff;
+    color: #1f3b7a;
+    border-color: #afc2ec;
+  }
+
+  .filter-btn.active {
+    background: #e6f1fb;
+    border-color: #378add;
+    color: #185fa5;
+  }
+
+  @media (max-width: 768px) {
+    #quiz-wrap {
+      width: calc(100% - 1.2rem);
+      margin: 0.8rem auto;
+      padding: 0.75rem;
+      border-radius: 14px;
+    }
+
+    #question-card {
+      padding: 1rem;
+    }
+
+    #q-num,
+    #score-badge {
+      font-size: 12px;
+    }
+
+    .opt {
+      font-size: 14px;
+      padding: 11px 12px;
+    }
+
+    .stat-grid {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    #next-btn,
+    #restart-btn {
+      width: 100%;
+      text-align: center;
+    }
+  }
+
+  @media (max-width: 480px) {
+    #header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    #question-text {
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .code-block {
+      font-size: 11px;
+      padding: 9px 11px;
+    }
+
+    .filter-btn {
+      font-size: 11px;
+      padding: 5px 10px;
+    }
+  }
+</style>
+
+<div id="quiz-wrap">
+  <h2 class="sr-only" style="position:absolute;left:-9999px">PHP Quiz from your codebase</h2>
+
+  <div id="filter-bar">
+    <span style="font-size:12px;color:var(--color-text-secondary);align-self:center">Filter:</span>
+  </div>
+
+  <div id="header">
+    <span id="category-badge">OOP</span>
+    <span id="q-num">Q 1 / 60</span>
+    <span id="score-badge">Score: 0</span>
+  </div>
+  <div id="progress-bar-wrap">
+    <div id="progress-bar" style="width:0%"></div>
+  </div>
+
+  <div id="question-card">
+    <div id="question-text"></div>
+    <div id="code-snippet"></div>
+    <div id="options"></div>
+    <div id="feedback"></div>
+    <button id="next-btn">Next question →</button>
+  </div>
+
+  <div id="results">
+    <h2>Quiz complete!</h2>
+    <p>Here's how you did across all PHP topics</p>
+    <div id="score-big"></div>
+    <div class="stat-grid">
+      <div class="stat-box"><strong id="r-correct">0</strong>Correct</div>
+      <div class="stat-box"><strong id="r-wrong">0</strong>Wrong</div>
+      <div class="stat-box"><strong id="r-pct">0%</strong>Score</div>
+    </div>
+    <div id="cat-breakdown" style="text-align:left;margin:1rem 0;font-size:13px;color:var(--color-text-secondary)">
+    </div>
+    <button id="restart-btn">Restart quiz ↺</button>
+  </div>
+</div>
+
+<script>
+  const ALL_QUESTIONS = [
+    // ── OOP ──
+    {
+      cat: "OOP", q: "What is the purpose of the `__construct()` method in a PHP class?",
+      opts: ["It destroys the object", "It is called automatically when an object is created", "It returns the object properties", "It is called when a method is invoked"],
+      ans: 1, exp: "A constructor is a special method that runs automatically when `new ClassName()` is called, used to initialize object properties."
+    },
+    {
+      cat: "OOP", q: "In `taskOfClass.php`, what does `$obj = new device('core-i5', 'Dell')` do?",
+      opts: ["Calls the `detdetails()` method", "Creates an instance of the `device` class and calls its constructor", "Defines the class", "Echoes the model and brand"],
+      ans: 1, exp: "The `new` keyword allocates memory and creates an instance (object) of the class, passing arguments to `__construct()`."
+    },
+    {
+      cat: "OOP", q: "In `oopday2.php`, what keyword is used for `laptop` to access `device` properties?",
+      opts: ["implements", "interface", "extends", "abstract"],
+      ans: 2, exp: "`extends` makes `laptop` a child of `device`, inheriting its properties and methods."
+    },
+    {
+      cat: "OOP", q: "What does `$this->model` refer to inside a class method?",
+      opts: ["A global variable", "The class name", "The current object's `model` property", "A static property"],
+      ans: 2, exp: "`$this` refers to the current object instance. `$this->model` accesses its `model` property."
+    },
+    {
+      cat: "OOP", q: "What access modifier allows a property to be accessed from outside the class?",
+      opts: ["private", "protected", "internal", "public"],
+      ans: 3, exp: "`public` properties and methods are accessible from anywhere — inside the class, child classes, and externally."
+    },
+    {
+      cat: "OOP", q: "In `taskOfClass.php`, the `android` class body is empty. What does this mean?",
+      opts: ["It causes a fatal error", "It cannot be instantiated", "It inherits all methods and properties from `smartphone`", "It is an abstract class"],
+      ans: 2, exp: "An empty child class simply inherits everything from its parent without adding new behavior."
+    },
+    {
+      cat: "OOP", q: "Which concept does the `laptop` class in `oopday2.php` demonstrate by inheriting from `device`?",
+      opts: ["Encapsulation", "Polymorphism", "Abstraction", "Inheritance"],
+      ans: 3, exp: "Inheritance allows `laptop` to reuse `device`'s constructor and `getDetails()` method without rewriting them."
+    },
+    {
+      cat: "OOP", q: "In `ooptask1.php`, what does `$obj->getdetails()` return for `new Student(1,'mani',20,'PHP')`?",
+      opts: ["ID: 1", "ID: 1, Name: mani, Age: 20, Degree: PHP", "mani 20 PHP", "Name: mani"],
+      ans: 1, exp: "The method concatenates all four properties using `. ` and the labels, matching the return string."
+    },
+    {
+      cat: "OOP", q: "What type of inheritance does `android extends smartphone` in `taskOfClass.php` represent?",
+      opts: ["Multiple inheritance", "Hierarchical inheritance", "Multilevel inheritance", "Single inheritance"],
+      ans: 2, exp: "Multilevel: `android` → `smartphone` → `device`. Each level adds one step to the chain."
+    },
+    {
+      cat: "OOP", q: "In `oop.php`, what is described as 'bundling data and functions into one unit'?",
+      opts: ["Inheritance", "Polymorphism", "Encapsulation", "Abstraction"],
+      ans: 2, exp: "Encapsulation hides internal data by exposing only controlled public methods, keeping code modular and secure."
+    },
+    {
+      cat: "OOP", q: "What is a destructor in PHP?",
+      opts: ["A method that initializes an object", "A method called when an object is destroyed", "A method that creates an object", "A method that returns object properties"],
+      ans: 1, exp: "The `__destruct()` method is automatically called when an object goes out of scope, useful for freeing resources."
+    },
+    {
+      cat: "OOP", q: "In `oop.php`, what does the `static` keyword do for a variable inside a function?",
+      opts: ["Makes it global", "Resets it on every call", "Retains its value between function calls", "Makes it private"],
+      ans: 2, exp: "A `static` variable inside a function keeps its value across multiple calls, unlike a regular local variable that resets."
+    },
+    {
+      cat: "OOP", q: "What does the `global` keyword do when used inside a function?",
+      opts: ["Creates a new global variable", "Allows the function to access a variable defined outside it", "Destroys the global variable", "Copies the variable"],
+      ans: 1, exp: "Without `global`, a function cannot access variables from the outer scope. The keyword bridges that gap."
+    },
+    {
+      cat: "OOP", q: "In `oopday2.php`, how is `setCameraPixels()` accessible on `android` objects, since `android` has an empty body?",
+      opts: ["It is not accessible", "Through the interface", "Through multilevel inheritance from smartphone", "Directly defined in android"],
+      ans: 2, exp: "`android extends smartphone`, which has `setCameraPixels()`. Inheritance passes it down."
+    },
+
+    // ── Abstract & Interface ──
+    {
+      cat: "Abstract & Interface", q: "What is an abstract class in PHP?",
+      opts: ["A class with only properties", "A class that cannot be instantiated and may contain abstract methods", "A class with a private constructor", "A class with no methods"],
+      ans: 1, exp: "Abstract classes act as blueprints. They cannot be used with `new` directly; child classes must implement all abstract methods."
+    },
+    {
+      cat: "Abstract & Interface", q: "In `task010.php`, why can't `$a = new animal()` be written?",
+      opts: ["animal has no properties", "animal is declared abstract", "animal extends another class", "animal has no constructor"],
+      ans: 1, exp: "`abstract class animal` cannot be instantiated. Only concrete subclasses like `dog` and `cat` can be."
+    },
+    {
+      cat: "Abstract & Interface", q: "What is the difference between an abstract method and a concrete method?",
+      opts: ["Abstract has a body; concrete does not", "Concrete has a body; abstract does not", "Both have bodies", "Neither has a body"],
+      ans: 1, exp: "An abstract method only declares a signature (`abstract public function eat();`). The concrete child must provide the body."
+    },
+    {
+      cat: "Abstract & Interface", q: "In `task010.php`, `duck` uses both `swim` and `fly` interfaces. What PHP keyword connects them?",
+      opts: ["extends", "implements", "abstract", "interface"],
+      ans: 1, exp: "`implements` is used to apply interfaces to a class. Multiple interfaces are comma-separated: `implements swim, fly`."
+    },
+    {
+      cat: "Abstract & Interface", q: "What is the key difference between an interface and an abstract class?",
+      opts: ["Interfaces can have concrete methods", "Abstract classes use `implements`, interfaces use `extends`", "Interfaces only have abstract methods; abstract classes can have concrete methods too", "There is no difference"],
+      ans: 2, exp: "Interfaces are pure contracts — all methods are abstract by nature. Abstract classes can mix abstract and concrete methods."
+    },
+    {
+      cat: "Abstract & Interface", q: "In `obstract.php`, `interface telegram extends socialMedia`. What does this mean?",
+      opts: ["telegram overrides socialMedia", "telegram inherits all methods from socialMedia and adds its own", "telegram implements socialMedia", "telegram is an abstract class"],
+      ans: 1, exp: "Interfaces can extend other interfaces. `telegram` inherits `sendPost()` and `likePost()` from `socialMedia` and adds `sendMsg()`."
+    },
+    {
+      cat: "Abstract & Interface", q: "In `task010.php`, `duck` implements `fly` but the `fly()` body is empty. Is this valid PHP?",
+      opts: ["No, it causes a fatal error", "Yes, as long as the method exists in the class", "No, interface methods must have logic", "Yes but only if fly is abstract"],
+      ans: 1, exp: "PHP only requires the method to be declared in the class. The body can be empty — that is valid implementation."
+    },
+    {
+      cat: "Abstract & Interface", q: "In `obstract.php`, `class Facebook implements socialMedia` must implement which methods?",
+      opts: ["sendMsg() only", "sendPost() and likePost()", "sendPost(), likePost(), and sendMsg()", "No methods required"],
+      ans: 1, exp: "Implementing `socialMedia` requires exactly the methods declared in that interface: `sendPost()` and `likePost()`."
+    },
+    {
+      cat: "Abstract & Interface", q: "From `task010.php`, `penguin` extends `animal` and implements `swim`. It must provide which methods?",
+      opts: ["swim() only", "eat(), sound(), swim()", "eat() and sound() only", "eat(), sound(), swim(), fly()"],
+      ans: 1, exp: "`animal` requires `eat()` and `sound()` (abstract); `swim` interface requires `swim()`. All three must be defined."
+    },
+    {
+      cat: "Abstract & Interface", q: "What happens if a class `extends` an abstract class but does not implement all abstract methods?",
+      opts: ["The class works normally", "PHP raises a fatal error unless the child is also abstract", "PHP ignores the missing methods", "The method returns null"],
+      ans: 1, exp: "PHP enforces abstract method contracts. A non-abstract child that skips one causes a fatal error at runtime."
+    },
+
+    // ── Arrays ──
+    {
+      cat: "Arrays", q: "In `class2.php`, what is `$matrix[0][1]` for the 3x4 matrix defined there?",
+      opts: ["1", "2", "4", "3"],
+      ans: 1, exp: "Row 0 is `[1,2,3,4]`. Index 1 of that row is `2`."
+    },
+    {
+      cat: "Arrays", q: "What type of array is `$person = array('name'=>'John','age'=>30,'city'=>'New York')`?",
+      opts: ["Indexed array", "Multidimensional array", "Associative array", "Static array"],
+      ans: 2, exp: "Associative arrays use named string keys instead of numeric indexes."
+    },
+    {
+      cat: "Arrays", q: "In `array.php`, how many nested loops are used to traverse the 3D array?",
+      opts: ["1", "2", "3", "4"],
+      ans: 2, exp: "A 3D array requires three nested loops: one for each dimension (depth level)."
+    },
+    {
+      cat: "Arrays", q: "What does `count($_COOKIE[$a])` do in `array.php`?",
+      opts: ["Counts total elements in the 3D array", "Returns the number of elements in the second dimension at index `$a`", "Returns the number of cookies", "Returns `$a`"],
+      ans: 1, exp: "`count()` on an array returns the number of elements at that level. Here it counts elements in row `$a`."
+    },
+    {
+      cat: "Arrays", q: "What does `foreach ($arr as $row)` do when `$arr` is a 2D array?",
+      opts: ["Iterates over individual elements", "Iterates over each inner array (row) one at a time", "Prints all elements", "Counts the rows"],
+      ans: 1, exp: "Each iteration of the outer `foreach` gives one inner array (a row). A nested `foreach` then iterates that row."
+    },
+    {
+      cat: "Arrays", q: "In `function.php`, what does `foreach ($ass as $a) { foreach ($a as $key => $value) }` access?",
+      opts: ["Only values", "Only keys", "Both keys and values of each associative sub-array", "Only indexes"],
+      ans: 2, exp: "The `$key => $value` syntax in `foreach` gives access to both the key name and its corresponding value."
+    },
+    {
+      cat: "Arrays", q: "What is `print_r($fruits)` used for?",
+      opts: ["Prints only the first element", "Prints the array in human-readable format showing keys and values", "Prints the count of the array", "Prints only values"],
+      ans: 1, exp: "`print_r()` outputs the array structure with keys and values, useful for debugging."
+    },
+
+    // ── Functions ──
+    {
+      cat: "Functions", q: "In `function.php`, what does a function return if no `return` statement is used?",
+      opts: ["0", "false", "An empty string", "null"],
+      ans: 3, exp: "PHP functions return `null` by default when no `return` statement is present."
+    },
+    {
+      cat: "Functions", q: "In `index.php`, what does `define('age', 30)` create?",
+      opts: ["A variable", "A function", "A constant", "A class property"],
+      ans: 2, exp: "`define()` creates a named constant. Unlike variables, constants have no `$` prefix and cannot be reassigned."
+    },
+    {
+      cat: "Functions", q: "What does `$x === $y` check, compared to `$x == $y`?",
+      opts: ["Only value equality", "Only type equality", "Both value and type equality", "Neither value nor type"],
+      ans: 2, exp: "Strict comparison `===` checks that both value AND data type match. `==` only checks value, allowing type coercion."
+    },
+    {
+      cat: "Functions", q: "In `index.php`, what is the output of `$x = 10; $x += 5; echo $x;`?",
+      opts: ["10", "5", "15", "105"],
+      ans: 2, exp: "`+=` is a compound assignment: `$x = $x + 5`, so `10 + 5 = 15`."
+    },
+    {
+      cat: "Functions", q: "What does `$x % $y` compute when `$x=10` and `$y=5`?",
+      opts: ["2", "0", "5", "50"],
+      ans: 1, exp: "The modulus operator returns the remainder. `10 / 5 = 2` remainder `0`."
+    },
+    {
+      cat: "Functions", q: "In `function.php`, `function sum($a)` takes an array and sums it. After `return`, what happens?",
+      opts: ["The loop continues", "Code after return executes", "The function ends and returns the value", "Nothing changes"],
+      ans: 2, exp: "`return` immediately exits the function and passes the value back to the caller. No code after it runs."
+    },
+
+    // ── Forms & POST ──
+    {
+      cat: "Forms & POST", q: "In `formsent.php`, how is the submitted name retrieved?",
+      opts: ["$_GET['name']", "$_SESSION['name']", "$_POST['name']", "$_REQUEST['name']"],
+      ans: 2, exp: "The form in `formm.php` uses `method='post'`, so values are in `$_POST`."
+    },
+    {
+      cat: "Forms & POST", q: "What does `enctype='multipart/form-data'` in `formm.php` enable?",
+      opts: ["JSON submission", "File uploads", "Password hashing", "Encrypted transmission"],
+      ans: 1, exp: "This encoding type is required for HTML forms that include file inputs (`<input type='file'>`)."
+    },
+    {
+      cat: "Forms & POST", q: "In `formm.php`, which input type validates email format natively in the browser?",
+      opts: ['type="text"', 'type="email"', 'type="area"', 'type="number"'],
+      ans: 1, exp: '`type="email"` triggers browser-native email format validation before submission.'
+    },
+    {
+      cat: "Forms & POST", q: "In `formsent.php`, what does `move_uploaded_file($temp_name, $url)` do?",
+      opts: ["Deletes the uploaded file", "Moves the temp file to a permanent location", "Reads the file", "Renames the file only"],
+      ans: 1, exp: "PHP stores uploads in a temp directory. `move_uploaded_file()` relocates it to a path you specify."
+    },
+    {
+      cat: "Forms & POST", q: "In `phpform.php`, the form action is `phpdatabase.php`. What does this mean?",
+      opts: ["The form validates on phpform.php", "The browser submits form data to phpdatabase.php", "The form connects to the database directly", "The action attribute is optional"],
+      ans: 1, exp: "The `action` attribute specifies the server-side script that processes the submitted form data."
+    },
+    {
+      cat: "Forms & POST", q: "In `outputformm.php`, `$_POST['uni']` was sent as `name='uni[]'`. What is `$_POST['uni']`?",
+      opts: ["A string", "An integer", "An array", "A boolean"],
+      ans: 2, exp: "Using `[]` in the field name (`uni[]`) causes PHP to collect all values into an array under that key."
+    },
+
+    // ── Database ──
+    {
+      cat: "Database", q: "In `new.php`, what does `mysqli_connect($hostname,$username,$password,$database)` return on success?",
+      opts: ["true", "A connection object/resource", "1", "The database name"],
+      ans: 1, exp: "On success it returns a `mysqli` connection object. On failure it returns `false`."
+    },
+    {
+      cat: "Database", q: "In `database.php`, what does `mysqli_connect_error()` return?",
+      opts: ["The query result", "The last connection error message", "The number of affected rows", "The database name"],
+      ans: 1, exp: "It returns the error message from the last failed `mysqli_connect()` call."
+    },
+    {
+      cat: "Database", q: "What SQL command inserts data into a table?",
+      opts: ["SELECT", "UPDATE", "INSERT INTO", "CREATE TABLE"],
+      ans: 2, exp: "The syntax is `INSERT INTO table_name (col1, col2) VALUES (val1, val2)`."
+    },
+    {
+      cat: "Database", q: "In `phpdatabase.php`, what does `mysqli_fetch_assoc($res)` return?",
+      opts: ["A numeric-indexed array", "An associative array of the current row", "The number of rows", "A string"],
+      ans: 1, exp: "It fetches one row at a time as an associative array with column names as keys. Returns `null` at end."
+    },
+    {
+      cat: "Database", q: "In `file-handling.php`, the DB is connected with `mysqli_connect()`. What critical error does `database.php` make in the connection call?",
+      opts: ["Wrong hostname", "Password is passed as third argument instead of fourth (database name)", "Missing username", "Wrong port"],
+      ans: 1, exp: "In `database.php`: `mysqli_connect('localhost','root','$database')` — the database name is passed as the password argument. Correct order is host, user, password, database."
+    },
+    {
+      cat: "Database", q: "What SQL statement retrieves all columns and rows from `usersData`?",
+      opts: ["SELECT name FROM usersData", "SELECT * FROM usersData", "GET * FROM usersData", "FETCH ALL usersData"],
+      ans: 1, exp: "`SELECT *` selects all columns. Without a `WHERE` clause, all rows are returned."
+    },
+    {
+      cat: "Database", q: "In `database.php`, what does `AUTO_INCREMENT` do on the `id` column?",
+      opts: ["Resets the ID to 0 each insert", "Automatically assigns a unique incrementing integer on each row insert", "Requires manual input", "Sets a default of 0"],
+      ans: 1, exp: "`AUTO_INCREMENT` automatically generates a unique ID for each new row, starting at 1 by default."
+    },
+    {
+      cat: "Database", q: "What is the security risk in `phpdatabase.php`'s insert query using `$_POST` values directly?",
+      opts: ["It slows down queries", "It is vulnerable to SQL Injection", "It stores data in the wrong table", "It uses the wrong syntax"],
+      ans: 1, exp: "Inserting raw `$_POST` values directly into SQL allows attackers to inject malicious SQL code. Prepared statements should be used instead."
+    },
+    {
+      cat: "Database", q: "In `database.php`, what does `TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` do?",
+      opts: ["Sets a fixed date", "Automatically sets the column to the current time on insert and updates it on each row update", "Encrypts the timestamp", "Sets time to 00:00:00"],
+      ans: 1, exp: "This column auto-records insertion time and auto-updates whenever the row is modified — useful for tracking changes."
+    },
+    {
+      cat: "Database", q: "In `new.php`, what is the SQL syntax error in the last code block (outside PHP tags)?",
+      opts: ["Wrong table name", "Raw SQL written outside `<?php ?>` tags without `mysqli_query()`", "Wrong column types", "Missing semicolon"],
+      ans: 1, exp: "The CREATE TABLE statement in `new.php` is written as plain text outside PHP tags — it will output as HTML text, not execute as SQL."
+    },
+
+    // ── File Handling ──
+    {
+      cat: "File Handling", q: "In `read-write-append.php`, what does `fopen('pgc.txt', 'r')` do?",
+      opts: ["Creates the file", "Opens the file for reading only", "Opens the file for writing", "Appends to the file"],
+      ans: 1, exp: "Mode `'r'` opens an existing file for reading. The file pointer starts at the beginning."
+    },
+    {
+      cat: "File Handling", q: "What does `feof($file)` return when the file pointer has reached the end?",
+      opts: ["false", "0", "true", "null"],
+      ans: 2, exp: "`feof()` returns `true` when the end of file is reached, used to stop the `while` loop."
+    },
+    {
+      cat: "File Handling", q: "In `file-handling.php`, mode `'r'` is used with `fopen`. If the goal was to ADD data to the file without deleting existing content, which mode should be used?",
+      opts: ["w", "r+", "a", "x"],
+      ans: 2, exp: "Mode `'a'` (append) adds new data to the end of the file without overwriting existing content."
+    },
+    {
+      cat: "File Handling", q: "What does `fgets($file)` do?",
+      opts: ["Reads the entire file", "Reads one line from the file", "Writes a line to the file", "Closes the file"],
+      ans: 1, exp: "`fgets()` reads one line at a time from an open file handle, returning it as a string."
+    },
+    {
+      cat: "File Handling", q: "In `file-handling.php`, what does `fwrite()` do (as described in comments)?",
+      opts: ["Reads from a file", "Writes data to an open file", "Closes the file", "Creates a file"],
+      ans: 1, exp: "`fwrite($file, $data)` writes a string to an open file handle."
+    },
+    {
+      cat: "File Handling", q: "What is the difference between `'w'` and `'a'` file modes?",
+      opts: ["Both append data", "'w' overwrites existing content; 'a' appends without deleting", "'a' overwrites; 'w' appends", "No difference"],
+      ans: 1, exp: "`'w'` truncates the file to zero length first. `'a'` preserves existing content and adds at the end."
+    },
+
+    // ── PHP Syntax & Concepts ──
+    {
+      cat: "PHP Syntax", q: "In `index.php`, what is the correct PHP opening tag?",
+      opts: ["<php>", "<?php", "<script php>", "<%php%>"],
+      ans: 1, exp: "`<?php` is the standard PHP opening tag. The closing tag is `?>` (optional at end of file)."
+    },
+    {
+      cat: "PHP Syntax", q: "In `oop.php`, what does `new` do in `$obj = new Student(...)`?",
+      opts: ["Calls a function", "Allocates memory and creates an object instance", "Copies an existing object", "Declares a class"],
+      ans: 1, exp: "`new` allocates memory for a new object and calls the class constructor."
+    },
+    {
+      cat: "PHP Syntax", q: "In `index.php`, what is the output of `$x=10; $y=5; echo $x/$y;`?",
+      opts: ["5", "2", "0.5", "2.0"],
+      ans: 1, exp: "`10 / 5 = 2`. PHP integer division returns an integer when both operands are integers and divide evenly."
+    },
+    {
+      cat: "PHP Syntax", q: "In `index.php`, what does `&&` represent?",
+      opts: ["OR operator", "NOT operator", "AND operator", "XOR operator"],
+      ans: 2, exp: "`&&` (and `and`) is the logical AND operator — both conditions must be true."
+    },
+    {
+      cat: "PHP Syntax", q: "What is the difference between `echo` and `print` in PHP?",
+      opts: ["echo can accept multiple arguments; print returns 1", "print is faster", "echo returns a value; print does not", "They are identical"],
+      ans: 0, exp: "`echo` accepts comma-separated values and has no return value. `print` accepts one argument and returns `1`."
+    },
+    {
+      cat: "PHP Syntax", q: "In `index.php`, what does `elseif` do in a conditional chain?",
+      opts: ["Ends the if block", "Provides an additional condition to check if the previous was false", "Executes always", "Is the same as else"],
+      ans: 1, exp: "`elseif` adds another condition to test when the preceding `if` (or `elseif`) is false. The `else` block has no condition."
+    },
+    {
+      cat: "PHP Syntax", q: "In `oop.php`, what does `$c += $a` mean?",
+      opts: ["Subtract a from c", "Assign c to a", "Add a to c and store in c", "Compare c and a"],
+      ans: 2, exp: "Compound assignment `+=` is shorthand for `$c = $c + $a`."
+    },
+    {
+      cat: "PHP Syntax", q: "In `class2.php`, what does `for ($a=0; $a<3; $a++)` do?",
+      opts: ["Runs once", "Runs 3 times (a = 0,1,2)", "Runs 4 times", "Runs infinitely"],
+      ans: 1, exp: "The loop runs while `$a < 3`, incrementing from 0 to 2 — that's 3 iterations."
+    },
+    {
+      cat: "PHP Syntax", q: "In `index.php`, what does `$i++` do?",
+      opts: ["Decrements $i by 1", "Increments $i by 1 after using its current value", "Multiplies $i by 2", "Resets $i to 0"],
+      ans: 1, exp: "`$i++` is post-increment: uses the current value, then adds 1. `++$i` would add 1 first."
+    },
+    {
+      cat: "PHP Syntax", q: "What does the `while (!feof($file))` loop pattern in `file-handling.php` ensure?",
+      opts: ["The file is written to", "The loop continues until end of file is reached", "The loop runs exactly once", "The file is deleted after reading"],
+      ans: 1, exp: "`!feof()` means 'not end of file'. The loop keeps reading lines until the entire file is processed."
+    },
+  ];
+
+  let questions = [...ALL_QUESTIONS];
+  let shuffled = [];
+  let current = 0;
+  let score = 0;
+  let answered = false;
+  let catStats = {};
+  let activeFilter = 'All';
+
+  const cats = ['All', ...new Set(ALL_QUESTIONS.map(q => q.cat))];
+
+  function shuffle(arr) {
+    let a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) { let j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
+
+  function buildFilters() {
+    const bar = document.getElementById('filter-bar');
+    bar.innerHTML = '<span style="font-size:12px;color:var(--color-text-secondary);align-self:center">Filter:</span>';
+    cats.forEach(c => {
+      const b = document.createElement('button');
+      b.className = 'filter-btn' + (c === activeFilter ? ' active' : '');
+      b.textContent = c === 'All' ? 'All topics' : c;
+      b.onclick = () => {
+        activeFilter = c;
+        questions = c === 'All' ? [...ALL_QUESTIONS] : ALL_QUESTIONS.filter(q => q.cat === c);
+        startQuiz();
+        buildFilters();
+      };
+      bar.appendChild(b);
+    });
+  }
+
+  function startQuiz() {
+    shuffled = shuffle(questions);
+    current = 0; score = 0; answered = false; catStats = {};
+    document.getElementById('results').style.display = 'none';
+    document.getElementById('question-card').style.display = 'block';
+    document.getElementById('header').style.display = 'flex';
+    document.getElementById('progress-bar-wrap').style.display = 'block';
+    showQuestion();
+  }
+
+  function showQuestion() {
+    answered = false;
+    const q = shuffled[current];
+    document.getElementById('category-badge').textContent = q.cat;
+    document.getElementById('q-num').textContent = `Q ${current + 1} / ${shuffled.length}`;
+    document.getElementById('score-badge').textContent = `Score: ${score}`;
+    document.getElementById('progress-bar').style.width = `${(current / shuffled.length) * 100}%`;
+    document.getElementById('question-text').textContent = q.q;
+    document.getElementById('code-snippet').innerHTML = '';
+    if (q.code) {
+      const pre = document.createElement('div');
+      pre.className = 'code-block';
+      pre.textContent = q.code;
+      document.getElementById('code-snippet').appendChild(pre);
+    }
+    const opts = document.getElementById('options');
+    opts.innerHTML = '';
+    const optArr = shuffle(q.opts.map((o, i) => ({ text: o, orig: i })));
+    optArr.forEach(o => {
+      const b = document.createElement('button');
+      b.className = 'opt'; b.textContent = o.text;
+      b.onclick = () => pick(b, o.orig, q, optArr);
+      opts.appendChild(b);
+    });
+    const fb = document.getElementById('feedback');
+    fb.className = 'feedback'; fb.style.display = 'none';
+    document.getElementById('next-btn').className = 'next-btn';
+  }
+
+  function pick(btn, chosen, q, optArr) {
+    if (answered) return;
+    answered = true;
+    const correct = chosen === q.ans;
+    if (correct) score++;
+    if (!catStats[q.cat]) catStats[q.cat] = { c: 0, t: 0 };
+    catStats[q.cat].t++;
+    if (correct) catStats[q.cat].c++;
+    document.querySelectorAll('.opt').forEach((b, i) => {
+      b.disabled = true;
+      if (optArr[i].orig === q.ans) b.classList.add('correct');
+      else if (b === btn && !correct) b.classList.add('wrong');
+      else b.classList.add('reveal');
+    });
+    const fb = document.getElementById('feedback');
+    fb.className = 'feedback show ' + (correct ? 'ok' : 'fail');
+    fb.textContent = (correct ? '✓ Correct — ' : '✗ Incorrect — ') + q.exp;
+    fb.style.display = 'block';
+    document.getElementById('next-btn').className = 'next-btn show';
+  }
+
+  document.getElementById('next-btn').onclick = () => {
+    current++;
+    if (current >= shuffled.length) { showResults(); }
+    else { showQuestion(); }
+  };
+
+  document.getElementById('restart-btn').onclick = () => { startQuiz(); buildFilters(); };
+
+  function showResults() {
+    document.getElementById('question-card').style.display = 'none';
+    document.getElementById('header').style.display = 'none';
+    document.getElementById('progress-bar-wrap').style.display = 'none';
+    const r = document.getElementById('results');
+    r.style.display = 'block';
+    const pct = Math.round((score / shuffled.length) * 100);
+    const emoji = pct >= 80 ? '🎉' : pct >= 60 ? '👍' : '📖';
+    document.getElementById('score-big').textContent = `${emoji} ${pct}%`;
+    document.getElementById('r-correct').textContent = score;
+    document.getElementById('r-wrong').textContent = shuffled.length - score;
+    document.getElementById('r-pct').textContent = pct + '%';
+    const bd = document.getElementById('cat-breakdown');
+    bd.innerHTML = '<p style="font-weight:500;color:var(--color-text-primary);margin-bottom:8px">By category:</p>';
+    Object.entries(catStats).forEach(([cat, s]) => {
+      const p = Math.round((s.c / s.t) * 100);
+      const bar = document.createElement('div');
+      bar.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px';
+      bar.innerHTML = `<span style="min-width:160px;color:var(--color-text-secondary)">${cat}</span><div style="flex:1;height:6px;background:var(--color-border-tertiary);border-radius:3px"><div style="width:${p}%;height:6px;background:${p >= 80 ? '#639922' : p >= 60 ? '#BA7517' : '#A32D2D'};border-radius:3px"></div></div><span style="min-width:36px;text-align:right;color:var(--color-text-primary);font-weight:500">${p}%</span>`;
+      bd.appendChild(bar);
+    });
+  }
+
+  buildFilters();
+  startQuiz();
+</script>
